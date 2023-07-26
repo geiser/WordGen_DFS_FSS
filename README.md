@@ -8,3 +8,11 @@
 - Result of flow state analysis for reading activities (Atividades de Leitura) [02-Ativ_Leitura/results/ancova.md](02-Ativ_Leitura/results/ancova.md)
 
 - Result of flow state analysis for math problem solving activities (Atividades de Resolução de Problemas Matemáticos) [03-Ativ_Res_Problemas_Matematicos/results/ancova.md](03-Ativ_Res_Problemas_Matematicos/results/ancova.md)
+
+
+
+
+- Result of learning: vocabulary (Vocabulario) [05-Learn_Vocabulario/ancova.md](05-Learn_Vocabulario/ancova.md)
+
+- Result of learning: reading (Leitura) [05-Learn_Leitura/ancova.md](06-Learn_Leitura/ancova.md)
+

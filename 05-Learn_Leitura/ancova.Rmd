@@ -1,0 +1,416 @@
+---
+title: "ANCOVA test for `pos.score`~`pre.score`+`grupo`*`genero`*`zona`"
+author: Geiser C. Challco <geiser@alumni.usp.br>
+comment: This file is automatically generate by Shiny-Statistic app (https://statistic.geiser.tech/)
+         Author - Geiser C. Challco <geiser@alumni.usp.br>
+         
+         Shiny-Statistic is distributed in the hope that it will be useful,
+         but WITHOUT ANY WARRANTY; without even the implied warranty of
+         MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+         GNU General Public License for more details.
+         
+         You should have received a copy of the GNU General Public License.
+         If not, see <https://www.gnu.org/licenses/>.
+output:
+  github_document:
+    toc: true
+  word_document:
+    toc: true
+  html_document:
+    toc: true
+fontsize: 10pt
+---
+
+```{r setup, include=FALSE}
+## Install and Load Packages
+if (!'remotes' %in% rownames(installed.packages())) install.packages('remotes')
+if (!"rshinystatistics" %in% rownames(installed.packages())) {
+  remotes::install_github("geiser/rshinystatistics")
+} else if (packageVersion("rshinystatistics") < "0.0.0.9800") {
+  remotes::install_github("geiser/rshinystatistics")
+}
+
+wants <- c('ggplot2','ggpubr','rshinystatistics','utils')
+has <- wants %in% rownames(installed.packages())
+if (any(!has)) install.packages(wants[!has])
+
+library(utils)
+library(ggpubr)
+library(ggplot2)
+library(rshinystatistics)
+```
+
+```{r include=FALSE, purl=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+defaultW <- getOption("warn")
+options(warn = -1)
+```
+
+## Initial Variables and Descriptive Statistics of initial data
+
+```{r, include=FALSE}
+dat <- as.data.frame(readxl::read_excel("Learn_Leitura.xlsx", sheet = "data"))
+row.names(dat) <- dat$id_estudante
+
+dat$grupo <- factor(dat$grupo, levels = c("Experimental","Controle"))
+dat$zona <- factor(dat$zona, levels = c("Urbana","Rural"))
+
+sdat <- dat[!is.na(dat$zona),]
+```
+
+
+```{r, include=FALSE}
+(df <- get.descriptives(dat, "pos.score", c("grupo","genero","zona"), include.global = F, symmetry.test = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+```{r, echo=FALSE, dpi=300, fig.width=12, fig.height=8}
+car::Boxplot(`pos.score` ~ `grupo`*`genero`*`zona`, data = dat, id = list(n = Inf))
+```
+
+## Checking of Assumptions
+
+### Identify and dealing with outliers (performing treatment of outliers)
+
+```{r, include=FALSE}
+(df <- rstatix::identify_outliers(group_by(dat[,c("id_estudante","grupo","genero","zona","pos.score","pre.score")],grupo,genero,zona),"pos.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df)
+```
+
+*Note*: Removing "E16" and "E127" because it is extreme
+
+```{r, include=FALSE}
+id.out <- c("E16","E127")
+dat <- dat[!dat$id_estudante %in% id.out,]
+sdat <- sdat[!sdat$id_estudante %in% id.out,]
+```
+
+### Assumption: Symmetry and treatment of outliers
+
+```{r, include=FALSE}
+(df <- get.descriptives(dat, "pos.score", c("genero"), include.global = F, symmetry.test = T))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+```{r, include=FALSE}
+(df <- get.descriptives(sdat, "pos.score", c("zona"), include.global = F, symmetry.test = T))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+### Assumption: Normality distribution of data
+
+```{r, include=FALSE}
+(df <- normality.test.by.residual(dat, "pos.score", c("grupo","genero","zona"), c(), "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+```{r, include=FALSE}
+(df <- get.descriptives(dat, "pos.score", c("grupo","genero","zona"), include.global = F, normality.test = T, skewness = "std.pos.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+*Note*: Normality test not fail in no one group.
+
+### Assumption: Linearity of dependent variables and covariate variable
+
+```{r, dpi=300, fig.width=12}
+ggscatter(dat, x="pre.score", y="pos.score", facet.by=c("grupo","genero"), short.panel.labs = F) + stat_smooth(method = "lm", span = 0.9)
+```
+
+```{r, dpi=300, fig.width=12}
+ggscatter(dat, x="pre.score", y="pos.score", facet.by=c("grupo","zona"), short.panel.labs = F) + stat_smooth(method = "lm", span = 0.9)
+```
+
+### Assumption: Homogeneity of data distribution
+
+```{r, include=FALSE}
+(df <- homogeneity.test(sdat, "pos.score", c("grupo","genero","zona"), c(), "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+```{r, include=FALSE}
+(df <- homogeneity.test(dat, "pos.score", c("grupo","genero"), c(), "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df, digits = 3)
+```
+
+## Computation of T-test (Pre VS Pos-teste)
+
+### T-test from all responses
+
+```{r, include=FALSE}
+pair.df <- data.frame(score=c(dat$pre.score,dat$pos.score),
+                      id=c(dat$id_estudante,dat$id_estudante),
+                      grupo=c(dat$grupo, dat$grupo),
+                      time=c(rep("pre",nrow(dat)),rep("pos",nrow(dat))))
+
+(pdf <- paired.ttest(pair.df, "score","time", "greater"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(pdf, digits = 3)
+```
+
+
+### T-test from control group
+
+```{r, include=FALSE}
+pair.df.control <- pair.df[pair.df$grupo == "Controle",]
+(pdf <- paired.ttest(pair.df.control, "score","time", "greater"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(pdf, digits = 3)
+```
+
+
+### T-test from intervention group
+
+```{r, include=FALSE}
+pair.df.experimental <- pair.df[pair.df$grupo == "Experimental",]
+(pdf <- paired.ttest(pair.df.experimental, "score","time", "greater"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(pdf, digits = 3)
+```
+
+*Note*: There are no significant differences (not enough time to produce effect in learning)
+
+
+## Computation of ANCOVA test and Pairwise Comparison (Control VS Intervention)
+
+### ANCOVA test
+
+```{r, include=FALSE}
+aov1 <- ancova.test(dat, "pos.score", c("grupo","genero"), "pre.score", 2, "ges")$pos.score
+(df1 <- round.pval(aov1))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df1[,c("Effect","DFn","DFd","SSn","SSd","F","p","ges","p<.05")], digits=3)
+```
+
+*Note*: There are significant differences on the factors: "grupo", and "genero"
+
+```{r, include=FALSE}
+aov2 <- ancova.test(sdat, "pos.score", c("grupo","genero","zona"), "pre.score", 2, "ges")$pos.score
+(df2 <- round.pval(aov2))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(df2[,c("Effect","DFn","DFd","SSn","SSd","F","p","ges","p<.05")], digits=3)
+```
+
+*Note*: There are no significant differences
+
+
+### Pairwise comparison using factor: **grupo**
+
+```{r, include=FALSE}
+pwc.grupo <- ancova.pwc(dat, "pos.score", "grupo", "pre.score", p.adjust.method = "bonferroni")
+(pdf.grupo <- get.ancova.pwc.table(pwc.grupo, only.sig = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+pdf.grupo <- round.pval(pdf.grupo)
+kable(pdf.grupo[,c("var","grupo","group1","group2","estimate","conf.low","conf.high","se","statistic","p","p.adj","p.adj.signif")], digits = 3)
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+oneWayAncovaPlots(dat, "pos.score", "grupo", aov1, pwc.grupo$pos.score, addParam = c("jitter"), font.label.size=14, step.increase=0.25, p.label="p.adj", subtitle = 2)$grupo + ggplot2::scale_color_manual(values=c("#00AA00","#FFBA00"))
+```
+
+### Pairwise comparison using factor: **genero**
+
+```{r, include=FALSE}
+pwc.genero <- ancova.pwc(dat, "pos.score", c("genero"), "pre.score", p.adjust.method = "bonferroni")
+(pdf.genero <- get.ancova.pwc.table(pwc.genero, only.sig = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+pdf.genero <- round.pval(pdf.genero)
+kable(pdf.genero[,c("var","genero","group1","group2","estimate","conf.low","conf.high","se","statistic","p","p.adj","p.adj.signif")], digits = 3)
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+oneWayAncovaPlots(dat, "pos.score", "genero", aov1, pwc.genero$pos.score, addParam = c("jitter"), font.label.size=14, step.increase=0.25, p.label="p.adj", subtitle = 3)$genero + ggplot2::scale_color_manual(labels=c("female","male"), values=c("#FF007F","#4D4DFF")) + scale_x_discrete("gender")
+```
+
+### Pairwise comparison using factor: **zona**
+
+```{r, include=FALSE}
+pwc.zona <- ancova.pwc(sdat, "pos.score", c("zona"), "pre.score", p.adjust.method = "bonferroni")
+(pdf.zona <- get.ancova.pwc.table(pwc.zona, only.sig = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+pdf.zona <- round.pval(pdf.zona)
+kable(pdf.zona[,c("var","zona","group1","group2","estimate","conf.low","conf.high","se","statistic","p","p.adj","p.adj.signif")], digits = 3)
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+oneWayAncovaPlots(sdat, "pos.score", "zona", aov2, pwc.zona$pos.score, addParam = c("jitter"), font.label.size=14, step.increase=0.25, p.label="p.adj", subtitle = 4)$zona +  ggplot2::scale_color_manual(values=c("#AA00FF","#00CCCC"))
+```
+
+
+### Pairwise comparison using factor: **grupo:genero**
+
+```{r, include=FALSE}
+pwc.grupo_genero <- ancova.pwc(dat, "pos.score", c("grupo","genero"), "pre.score", p.adjust.method = "bonferroni")
+(pdf.grupo_genero <- get.ancova.pwc.table(pwc.grupo_genero, only.sig = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+pdf.grupo_genero <- round.pval(pdf.grupo_genero)
+kable(pdf.grupo_genero[,c("var","grupo","genero","group1","group2","estimate","conf.low","conf.high","se","statistic","p","p.adj","p.adj.signif")], digits = 3)
+```
+
+```{r}
+plots <- twoWayAncovaPlots(dat, "pos.score", c("grupo","genero"), aov1, pwc.grupo_genero$pos.score, addParam = c("jitter"), font.label.size=14, step.increase=0.25, p.label="p.adj", subtitle = 4)
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+plots$grupo + ggplot2::scale_color_manual(labels=c("female","male"), values=c("#FF007F","#4D4DFF")) + scale_x_discrete("gender")
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+plots$genero + ggplot2::scale_color_manual(values=c("#00AA00","#FFBA00"))
+```
+
+### Pairwise comparison using factor: **grupo:zona**
+
+```{r, include=FALSE}
+pwc.grupo_zona <- ancova.pwc(sdat, "pos.score", c("grupo","zona"), "pre.score", p.adjust.method = "bonferroni")
+(pdf.grupo_zona <- get.ancova.pwc.table(pwc.grupo_zona, only.sig = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+pdf.grupo_zona <- round.pval(pdf.grupo_zona)
+kable(pdf.grupo_zona[,c("var","grupo","zona","group1","group2","estimate","conf.low","conf.high","se","statistic","p","p.adj","p.adj.signif")], digits = 3)
+```
+
+```{r}
+plots <- twoWayAncovaPlots(sdat, "pos.score", c("grupo","zona"), aov2, pwc.grupo_zona$pos.score, addParam = c("jitter"), font.label.size=14, step.increase=0.25, p.label="p.adj", subtitle = 6)
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+plots$grupo + ggplot2::scale_color_manual(values=c("#AA00FF","#00CCCC"))
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+plots$zona + ggplot2::scale_color_manual(values=c("#00AA00","#FFBA00"))
+```
+
+### Pairwise comparison using factor: **genero:zona**
+
+```{r, include=FALSE}
+pwc.genero_zona <- ancova.pwc(sdat, "pos.score", c("genero","zona"), "pre.score", p.adjust.method = "bonferroni")
+(pdf.genero_zona <- get.ancova.pwc.table(pwc.genero_zona, only.sig = F))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+pdf.genero_zona <- round.pval(pdf.genero_zona)
+kable(pdf.genero_zona[,c("var","genero","zona","group1","group2","estimate","conf.low","conf.high","se","statistic","p","p.adj","p.adj.signif")], digits = 3)
+```
+
+```{r}
+plots <- twoWayAncovaPlots(sdat, "pos.score", c("genero","zona"), aov2, pwc.genero_zona$pos.score, addParam = c("jitter"), font.label.size=14, step.increase=0.25, p.label="p.adj", subtitle = 7)
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+plots$genero + ggplot2::scale_color_manual(values=c("#AA00FF","#00CCCC"))
+```
+
+```{r, dpi=300, fig.width=7, fig.height=7}
+plots$zona + ggplot2::scale_color_manual(labels=c("female","male"), values=c("#FF007F","#4D4DFF")) + scale_x_discrete("gender")
+```
+
+## Descriptive statistics and estimated marginal means to be reported by grupo and genero
+
+```{r, include=FALSE}
+(apa <- get.ancova.emmeans.with.ds(pwc.grupo, dat, "pos.score", "grupo", "apa-format", covar = "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(round.pval(apa), digits = 3)
+```
+
+```{r, include=FALSE}
+(apa <- get.ancova.emmeans.with.ds(pwc.genero, dat, "pos.score", "genero", "apa-format", covar = "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(round.pval(apa), digits = 3)
+```
+
+```{r, include=FALSE}
+(apa <- get.ancova.emmeans.with.ds(pwc.grupo_genero, dat, "pos.score", c("grupo","genero"), "apa-format", covar = "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(round.pval(apa), digits = 3)
+```
+
+## Descriptive statistics and estimated marginal means to be reported with zona
+
+```{r, include=FALSE}
+(apa <- get.ancova.emmeans.with.ds(pwc.zona, sdat, "pos.score", "zona", "apa-format", covar = "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(round.pval(apa), digits = 3)
+```
+
+```{r, include=FALSE}
+(apa <- get.ancova.emmeans.with.ds(pwc.grupo_zona, sdat, "pos.score", c("grupo","zona"), "apa-format", covar = "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(round.pval(apa), digits = 3)
+```
+
+```{r, include=FALSE}
+(apa <- get.ancova.emmeans.with.ds(pwc.genero_zona, sdat, "pos.score", c("genero","zona"), "apa-format", covar = "pre.score"))
+```
+
+```{r, echo=FALSE, purl=FALSE}
+kable(round.pval(apa), digits = 3)
+```
+
+
+## Tips and References
+
+-   Use the site <https://www.tablesgenerator.com> to convert the HTML tables into Latex format
+
+-   [2]: Miot, H. A. (2017). Assessing normality of data in clinical and experimental trials. J Vasc Bras, 16(2), 88-91.
+
+-   [3]: Bárány, Imre; Vu, Van (2007). "Central limit theorems for Gaussian polytopes". Annals of Probability. Institute of Mathematical Statistics. 35 (4): 1593--1621.
+
+```{r include=FALSE, echo=FALSE, purl=FALSE}
+options(warn = defaultW)
+```
