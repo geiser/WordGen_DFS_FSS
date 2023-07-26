@@ -12,7 +12,7 @@
 
 
 
-- Result of learning: vocabulary (Vocabulario) [05-Learn_Vocabulario/ancova.md](05-Learn_Vocabulario/ancova.md)
+- Result of learning: vocabulary (Vocabulario) [04-Learn_Vocabulario/ancova.md](04-Learn_Vocabulario/ancova.md)
 
-- Result of learning: reading (Leitura) [05-Learn_Leitura/ancova.md](06-Learn_Leitura/ancova.md)
+- Result of learning: reading (Leitura) [05-Learn_Leitura/ancova.md](05-Learn_Leitura/ancova.md)
 
